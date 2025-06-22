@@ -1,0 +1,47 @@
+trigger:
+  branches:
+    include:
+      - master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  buildConfiguration: 'Release'
+
+steps:
+- task: UseDotNet@2
+  inputs:
+    packageType: 'sdk'
+    version: '6.x' # Adjust this based on your .NET version
+    installationPath: $(Agent.ToolsDirectory)/dotnet
+
+- script: |
+    echo Building backend...
+    cd backend
+    dotnet build --configuration $(buildConfiguration)
+  displayName: 'Build backend'
+
+- script: |
+    echo Running tests...
+    cd backend
+    dotnet test --configuration $(buildConfiguration)
+  displayName: 'Run tests'
+
+- task: ArchiveFiles@2
+  inputs:
+    rootFolderOrFile: '$(System.DefaultWorkingDirectory)/backend'
+    includeRootFolder: false
+    archiveType: 'zip'
+    archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+    replaceExistingArchive: true
+
+- publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
+  artifact: drop
+
+- task: AzureWebApp@1
+  inputs:
+    azureSubscription: 'CarManagementSystem'
+    appType: 'webAppLinux'
+    appName: 'CarManagementSystem'
+    package: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
