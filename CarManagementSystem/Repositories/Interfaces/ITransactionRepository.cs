@@ -1,4 +1,5 @@
 ﻿using CarManagementSystem.Models;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace CarManagementSystem.Repositories.Interfaces
 {
@@ -7,6 +8,6 @@ namespace CarManagementSystem.Repositories.Interfaces
         Task<IEnumerable<Transaction>> GetAllTransactionsAsync();
         Task<Transaction> GetTransactionByIdAsync(int id);
         Task AddTransactionAsync(Transaction transaction);
-
+        Task<IDbContextTransaction> BeginTransactionAsync();
     }
 }

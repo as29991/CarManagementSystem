@@ -8,6 +8,6 @@ namespace CarManagementSystem.Services.Interfaces
     {
         Task<IEnumerable<TransactionDTO>> GetAllTransactionsAsync();
         Task<TransactionDTO> GetTransactionByIdAsync(int id);
-        Task AddTransactionAsync(CreateTransactionDTO createTransactionDTO);
+        Task<TransactionDTO> AddTransactionAsync(CreateTransactionDTO createTransactionDTO);
     }
 }

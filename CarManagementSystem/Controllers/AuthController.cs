@@ -8,6 +8,7 @@ using CarManagementSystem.Data;
 using CarManagementSystem.Services.Implementations;
 using CarManagementSystem.Services.Interfaces;
 using System.Data;
+using Microsoft.AspNetCore.Authorization;
 
 namespace CarManagementSystem.Controllers
 {
@@ -97,9 +98,10 @@ namespace CarManagementSystem.Controllers
                 Email = userInDb.Email,
                 Token = accessToken,
                 Roles = roles
-            }) ;
+            });
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost("role")]
         public async Task<ActionResult> CreateRoles(string roleName)
         {
@@ -110,6 +112,7 @@ namespace CarManagementSystem.Controllers
             return Ok();
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost("assign")]
         public async Task<ActionResult> AssignRoleToUser(string username, string roleName)
         {
@@ -128,23 +131,22 @@ namespace CarManagementSystem.Controllers
         }
 
 
-    //    [HttpGet("logout")]
-    //    public async Task<ActionResult> LogoutUser()
-    //    {
+        //    [HttpGet("logout")]
+        //    public async Task<ActionResult> LogoutUser()
+        //    {
 
-    //        try
-    //        {
-    //            await signInManager.SignOutAsync();
-    //        }
-    //        catch (Exception ex)
-    //        {
-    //            return BadRequest("Someting went wrong, please try again" + ex.Message);
+        //        try
+        //        {
+        //            await signInManager.SignOutAsync();
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            return BadRequest("Someting went wrong, please try again" + ex.Message);
 
-    //        }
+        //        }
 
-    //        return Ok("You Have Been Logged Out");
-    //    }
+        //        return Ok("You Have Been Logged Out");
+        //    }
 
     }
 }
-

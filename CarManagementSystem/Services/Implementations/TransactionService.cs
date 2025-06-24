@@ -5,6 +5,7 @@ using CarManagementSystem.DTOs;
 using CarManagementSystem.Models;
 using CarManagementSystem.Repositories.Interfaces;
 using CarManagementSystem.Services.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace CarManagementSystem.Services
 {
@@ -13,12 +14,18 @@ namespace CarManagementSystem.Services
         private readonly ITransactionRepository _transactionRepository;
         private readonly IVehicleRepository _vehicleRepository;
         private readonly IMapper _mapper;
+        private readonly ILogger<TransactionService> _logger;
 
-        public TransactionService(ITransactionRepository transactionRepository, IVehicleRepository vehicleRepository, IMapper mapper)
+        public TransactionService(
+            ITransactionRepository transactionRepository,
+            IVehicleRepository vehicleRepository,
+            IMapper mapper,
+            ILogger<TransactionService> logger)
         {
             _transactionRepository = transactionRepository;
             _vehicleRepository = vehicleRepository;
             _mapper = mapper;
+            _logger = logger;
         }
 
         public async Task<IEnumerable<TransactionDTO>> GetAllTransactionsAsync()
@@ -40,17 +47,43 @@ namespace CarManagementSystem.Services
             return _mapper.Map<TransactionDTO>(transaction);
         }
 
-        public async Task AddTransactionAsync(CreateTransactionDTO createTransactionDTO)
+        public async Task<TransactionDTO> AddTransactionAsync(CreateTransactionDTO createTransactionDTO)
         {
+            using var transaction = await _transactionRepository.BeginTransactionAsync();
             try
             {
-                var vehicle = await _vehicleRepository.GetVehicleByIdAsync(createTransactionDTO.VehicleId);
-                if (vehicle == null || vehicle.Status == VehicleStatus.Sold)
+                _logger.LogInformation($"Starting transaction creation for VehicleId: {createTransactionDTO.VehicleId}, UserId: {createTransactionDTO.UserId}");
+
+                // Validate inputs
+                if (string.IsNullOrEmpty(createTransactionDTO.UserId))
                 {
-                    throw new Exception("Vehicle not available");
+                    throw new ArgumentException("UserId cannot be null or empty");
                 }
 
-                var transaction = new Transaction
+                if (createTransactionDTO.VehicleId <= 0)
+                {
+                    throw new ArgumentException("VehicleId must be greater than 0");
+                }
+
+                if (createTransactionDTO.Amount <= 0)
+                {
+                    throw new ArgumentException("Amount must be greater than 0");
+                }
+
+                var vehicle = await _vehicleRepository.GetVehicleByIdAsync(createTransactionDTO.VehicleId);
+                if (vehicle == null)
+                {
+                    _logger.LogWarning($"Vehicle with ID {createTransactionDTO.VehicleId} not found");
+                    throw new Exception("Vehicle not found");
+                }
+
+                if (vehicle.Status == VehicleStatus.Sold)
+                {
+                    _logger.LogWarning($"Vehicle with ID {createTransactionDTO.VehicleId} is already sold");
+                    throw new Exception("Vehicle is already sold");
+                }
+
+                var newTransaction = new Transaction
                 {
                     VehicleId = createTransactionDTO.VehicleId,
                     UserId = createTransactionDTO.UserId,
@@ -58,16 +91,31 @@ namespace CarManagementSystem.Services
                     TransactionDate = DateTime.UtcNow
                 };
 
-                await _transactionRepository.AddTransactionAsync(transaction);
+                _logger.LogInformation($"Adding transaction to database: VehicleId={newTransaction.VehicleId}, UserId={newTransaction.UserId}, Amount={newTransaction.Amount}");
+                await _transactionRepository.AddTransactionAsync(newTransaction);
 
                 // Update the status of the vehicle to Sold
                 vehicle.Status = VehicleStatus.Sold;
+                _logger.LogInformation($"Updating vehicle {vehicle.Id} status to Sold");
                 await _vehicleRepository.UpdateVehicleAsync(vehicle, vehicle.Id);
+
+                await transaction.CommitAsync();
+                _logger.LogInformation($"Transaction completed successfully with ID: {newTransaction.Id}");
+
+                return new TransactionDTO
+                {
+                    Id = newTransaction.Id,
+                    VehicleId = newTransaction.VehicleId,
+                    UserId = newTransaction.UserId,
+                    TransactionDate = newTransaction.TransactionDate,
+                    Amount = newTransaction.Amount
+                };
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error in AddTransactionAsync: {ex.Message}");
-                throw; 
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, $"Error in AddTransactionAsync for VehicleId: {createTransactionDTO.VehicleId}, UserId: {createTransactionDTO.UserId}");
+                throw;
             }
         }
     }

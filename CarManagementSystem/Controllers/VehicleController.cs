@@ -36,21 +36,21 @@ namespace CarManagementSystem.Controllers
             return Ok();
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete("/{id}")]
         public async Task<ActionResult> DeleteVehicleAsync(int id)
         {
             await _vehicleService.DeleteVehicleAsync(id);
             return Ok();
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("/{id}")]
         public async Task<ActionResult<CreateVehicleDTO>> GetVehicleByIdAsync(int id)
         {
             var response = await _vehicleService.GetVehicleByIdAsync(id);
             return Ok(response);
         }
 
-        [HttpPut("{id}")]
+        [HttpPut("/{id}")]
         public async Task<ActionResult> UpdateVehicleAsync(Vehicle vehicle, int id)
         {
             await _vehicleService.UpdateVehicleAsync(vehicle, id);

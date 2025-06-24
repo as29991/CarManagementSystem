@@ -12,18 +12,20 @@ namespace CarManagementSystem.Services.AuthenticationService
     public class TokenService
     {
         private readonly UserManager<IdentityUser> _userManager;
+        private readonly IConfiguration _configuration;
 
-        public TokenService(UserManager<IdentityUser> userManager)
+        public TokenService(UserManager<IdentityUser> userManager, IConfiguration configuration)
         {
             _userManager = userManager;
+            _configuration = configuration;
         }
 
         private const int ExpirationMinutes = 30;
+
         public async Task<string> CreateToken(IdentityUser user)
         {
             var expiration = DateTime.UtcNow.AddMinutes(ExpirationMinutes);
             var roles = await _userManager.GetRolesAsync(user);
-
             var token = CreateJwtToken(
                 CreateClaims(user, roles),
                 CreateSigningCredentials(),
@@ -36,8 +38,8 @@ namespace CarManagementSystem.Services.AuthenticationService
         private JwtSecurityToken CreateJwtToken(List<Claim> claims, SigningCredentials credentials,
             DateTime expiration) =>
             new JwtSecurityToken(
-                issuer: "MyIssuer",
-                audience: "MyAudience",
+                issuer: _configuration["Jwt:Issuer"],
+                audience: _configuration["Jwt:Audience"],
                 expires: expiration,
                 claims: claims,
                 signingCredentials: credentials
@@ -52,12 +54,10 @@ namespace CarManagementSystem.Services.AuthenticationService
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                     new Claim(ClaimTypes.Name, user.UserName),
                 };
-
                 foreach (var role in roles)
                 {
                     claims.Add(new Claim(ClaimTypes.Role, role));
                 }
-
                 return claims;
             }
             catch (Exception e)
@@ -66,15 +66,15 @@ namespace CarManagementSystem.Services.AuthenticationService
                 throw;
             }
         }
+
         private SigningCredentials CreateSigningCredentials()
         {
             return new SigningCredentials(
                 new SymmetricSecurityKey(
-                    Encoding.ASCII.GetBytes("Mmx44IfURe84A/c4i0g2eY8m/DEhzUzXyyVPwKIo2SU=")
+                    Encoding.UTF8.GetBytes(_configuration["Jwt:Key"])
                 ),
                 SecurityAlgorithms.HmacSha256
             );
         }
     }
 }
-

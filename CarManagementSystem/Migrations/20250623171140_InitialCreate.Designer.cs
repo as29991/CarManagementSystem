@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CarManagementSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250622194546_InitialCreate")]
+    [Migration("20250623171140_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
